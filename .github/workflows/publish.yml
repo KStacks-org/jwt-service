@@ -1,13 +1,17 @@
 name: Publish to GitHub Packages
 
-# Trigger on push to main or when a version tag is created
 on:
   push:
-    branches:
-      - master
+    branches: [dev, prod]
     tags:
       - 'v*'
-  workflow_dispatch: # Allow manual trigger
+  pull_request:
+    branches: [dev, prod]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   publish:
@@ -34,6 +38,7 @@ jobs:
         run: ./mvnw -B clean package --file pom.xml
 
       - name: Publish to GitHub Packages
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/prod' || startsWith(github.ref, 'refs/tags/v'))
         run: ./mvnw -B deploy --file pom.xml --settings .github/settings.xml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
